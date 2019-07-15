@@ -1,5 +1,6 @@
 import scrapy
 import re
+import time 
 
 class WildBerriesSpider(scrapy.Spider):
     name = "wb_spider"
@@ -10,6 +11,12 @@ class WildBerriesSpider(scrapy.Spider):
 
         for item in response.xpath(SET_SELECTOR):
             yield {
+                   'id' : item.css('a div ::attr(id)').extract_first(),
+
+                   'url': item.css('a ::attr(href)').extract_first(),
+
+                   'timetamp' : int(time.time()),
+
                    'stock' : 
                    {
                         'count' : self.check_count_for_null(item.xpath('.//span/span/span/a/span/span/span/span/text()').extract_first()),
@@ -26,6 +33,14 @@ class WildBerriesSpider(scrapy.Spider):
                    'brand' : item.xpath('.//span/span/span/a/div[@class="dtlist-inner-brand"]/div[@class="dtlist-inner-brand-name"]/strong/text()').extract_first(),
                    'section' : response.xpath('//div[@class="breadcrumbs"]/div/a/span/text()').getall()
                    }
+
+        NEXT_PAGE_SELECTOR = '.next ::attr(href)'
+        next_page = response.css(NEXT_PAGE_SELECTOR).extract_first()
+        if next_page:
+            yield scrapy.Request(
+                    response.urljoin(next_page),
+                    callback = self.parse
+                    )
 
     def check_count_for_null(self, extracted_item):
         if bool(extracted_item):
